@@ -1,0 +1,17 @@
+<svg width="400" height="300" xmlns="http://www.w3.org/2000/svg">
+  <!-- Image element -->
+  <image href="website_photo/cat1.PNG" x="100" y="50" width="200" height="200" />
+
+  <!-- Define an arrowhead marker -->
+  <defs>
+    <marker id="arrowhead" markerWidth="10" markerHeight="7" refX="0" refY="3.5" orient="auto">
+      <polygon points="0 0, 10 3.5, 0 7" fill="black" />
+    </marker>
+  </defs>
+
+  <!-- Line with arrow pointing to the image -->
+  <line x1="50" y1="150" x2="100" y2="150" stroke="black" stroke-width="2" marker-end="url(#arrowhead)" />
+
+  <!-- Optionally, you can add a label for the image -->
+  <text x="20" y="145" font-family="Arial" font-size="16" fill="black">Cat Image</text>
+</svg>
