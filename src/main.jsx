@@ -4,6 +4,7 @@ import App from "./App.jsx";
 import "./index.css";
 import Lenis from "@studio-freight/lenis";
 import { ThemeProvider } from "./components/ThemeContext.jsx";
+import { ParticlesConnectionProvider } from "./components/ParticlesConnectionContext.jsx";
 
 // Lenis smooth scroll setup
 const lenis = new Lenis({
@@ -23,7 +24,9 @@ requestAnimationFrame(raf);
 createRoot(document.getElementById("root")).render(
   <StrictMode>
     <ThemeProvider>
-      <App />
+      <ParticlesConnectionProvider>
+        <App />
+      </ParticlesConnectionProvider>
     </ThemeProvider>
   </StrictMode>
 );

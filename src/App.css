@@ -2,24 +2,25 @@ body {
   cursor: none; /* Hide the default cursor */
   overflow-x: hidden;
   background-color: var(--background);
+  transition: background-color 0.5s ease, color 0.5s ease;
 }
 
-.cursor {
-  position: fixed; /* Fixed positioning relative to the viewport */
-  pointer-events: none; /* Prevents cursor elements from blocking other interactions */
-  z-index: 9999; /* Ensure the cursor is on top of other elements */
+*, *::before, *::after {
+  transition: background-color 0.5s ease, color 0.5s ease, border-color 0.5s ease, fill 0.5s ease, stroke 0.5s ease;
 }
 
 .cursor-inner {
-  width: 8px;
-  height: 8px;
-  background-color: black;
+  width: 12px;
+  height: 12px;
+  background-color: white;
   border-radius: 50%;
-  position: absolute;
+  position: fixed;
   top: 0;
   left: 0;
   transform: translate(-50%, -50%);
   pointer-events: none; /* Prevent interaction */
+  mix-blend-mode: difference;
+  z-index: 9999;
 }
 #grain-bg {
   position: fixed;
@@ -33,47 +34,22 @@ body {
 .cursor-outer {
   width: 40px;
   height: 40px;
-  border: 2px solid rgba(0, 0, 0, 0.1);
+  background-color: white;
   border-radius: 50%;
-  position: absolute;
+  position: fixed;
   top: 0;
   left: 0;
   transform: translate(-50%, -50%);
   transition: transform 0.1s ease-out;
   pointer-events: none; /* Prevent interaction */
-}
-
-[data-mode="night"] .cursor-outer {
-  border-color: rgba(
-    255,
-    255,
-    255,
-    0.1
-  ); /* Change border color to a lighter shade */
-  background-color: rgba(
-    255,
-    255,
-    255,
-    0.1
-  ); /* Optional: Add a background color if needed */
-}
-[data-mode="night"] .cursor-inner {
-  border-color: rgba(
-    255,
-    255,
-    255,
-    0.1
-  ); /* Change border color to a lighter shade */
-  background-color: rgba(
-    255,
-    255,
-    255,
-    0.1
-  ); /* Optional: Add a background color if needed */
+  mix-blend-mode: difference;
+  will-change: transform;
+  z-index: 9998;
 }
 
 @media (max-width: 768px) {
-  .cursor {
+  .cursor-inner,
+  .cursor-outer {
     display: none;
   }
 }

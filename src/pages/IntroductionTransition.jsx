@@ -31,16 +31,9 @@ export default function IntroductionTransition() {
   }, []);
 
   useGSAP(() => {
+    // Create a timeline that plays automatically on mount
     const timeline = gsap.timeline({
-      scrollTrigger: {
-        trigger: introHeaderRef.current,
-        start: "top top",
-        end: "+=100%",
-        pin: true,
-        scrub: true,
-        markers: false,
-        markers: false,
-      },
+      delay: 0.5, // Delay before starting the animation
     });
 
     timeline
@@ -52,17 +45,18 @@ export default function IntroductionTransition() {
           y: "0",
           ease: "power1.inOut",
           stagger: 0.03,
+          duration: 0.8,
         }
       )
       .fromTo(
         diamondRef.current,
-        { strokeDasharray: 400, strokeDashoffset: 400 },
+        { strokeDashoffset: 400 },
         {
           strokeDashoffset: 0,
           ease: "power1.inOut",
-          duration: 1.25,
+          duration: 1.5,
         },
-        0
+        0.5
       );
 
     let screenSize = { lg: 1, md: 0.7, sm: 0.4 };
@@ -159,7 +153,6 @@ export default function IntroductionTransition() {
           </Typography>
 
           <svg
-            ref={diamondRef}
             className="diamond-svg flex"
             xmlns="http://www.w3.org/2000/svg"
             fill="none"
@@ -170,11 +163,16 @@ export default function IntroductionTransition() {
             }}
           >
             <path
+              ref={diamondRef}
               d="M50 0 L100 50 L50 100 L0 50 Z"
               stroke={strokeColor}
               strokeWidth="0.5"
               fill="none"
               opacity="0.1"
+              style={{
+                strokeDasharray: 400,
+                strokeDashoffset: 400,
+              }}
             />
           </svg>
         </div>

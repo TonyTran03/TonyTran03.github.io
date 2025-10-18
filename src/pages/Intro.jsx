@@ -1,4 +1,4 @@
-import React, { useRef, useEffect } from "react";
+import React, { useRef, useEffect, useState } from "react";
 import Typography from "@mui/material/Typography";
 import "@fontsource/poppins";
 import {
@@ -16,6 +16,7 @@ import "@fontsource/bebas-neue";
 import { useGSAP } from "@gsap/react";
 import IntroductionTransition from "./IntroductionTransition.jsx";
 import { BackgroundEffects } from "../components/BackgroundEffects";
+import LoadingScreen from "../components/LoadingScreen.jsx";
 
 import "./Intro.css";
 import Project from "./Project.jsx";
@@ -30,29 +31,8 @@ gsap.registerPlugin(ScrollTrigger);
 
 export default function Intro() {
   const refName = useRef();
-  const introSectionRef = useRef();
-
-  useGSAP(() => {
-    const isMobile = window.innerWidth <= 500;
-    if (!isMobile) {
-      const tl = gsap.timeline({
-        scrollTrigger: {
-          trigger: introSectionRef.current,
-          start: "top top",
-          end: "bottom+=30% center+=10%",
-          scrub: true,
-          pin: refName.current,
-          markers: false,
-        },
-      });
-
-      tl.fromTo(
-        refName.current,
-        { opacity: 1, y: 0 },
-        { opacity: 0, y: -200, duration: 1, ease: "power1.inOut" }
-      );
-    }
-  }, []);
+  const [isLoading, setIsLoading] = useState(true);
+  const contentRef = useRef();
 
   useEffect(() => {
     // Trigger ScrollTrigger refresh to recalculate after all content is rendered
@@ -61,13 +41,29 @@ export default function Intro() {
 
   const { isDayMode } = useTheme();
 
+  const handleLoadingComplete = () => {
+    setIsLoading(false);
+  };
+
+  useEffect(() => {
+    if (!isLoading && contentRef.current) {
+      // Fade in the main content after loading screen is done
+      gsap.fromTo(
+        contentRef.current,
+        { opacity: 0 },
+        { opacity: 1, duration: 0.3, ease: "power1.inOut" }
+      );
+    }
+  }, [isLoading]);
+
   return (
     <MuiThemeProvider theme={muiTheme}>
+      {isLoading && <LoadingScreen onLoadingComplete={handleLoadingComplete} />}
       <div
-        ref={introSectionRef}
-        className="flex flex-col lg:flex-row min-h-screen shadow-sm"
+        ref={contentRef}
+        style={{ opacity: 0 }}
       >
-        <div className="absolute w-full h-screen bg-[var(--cookies)] z-10">
+        <div className="w-full h-screen bg-[var(--cookies)]">
           <BackgroundEffects isDayMode={isDayMode} />
 
           <div
@@ -104,13 +100,24 @@ export default function Intro() {
               >
                 Software Developer
               </Typography>
+              <Typography
+                sx={{
+                  mt: 2,
+                  fontSize: "1rem",
+                  fontFamily: "Poppins, sans-serif",
+                  color: isDayMode ? "#666" : "#aaa",
+                  maxWidth: "600px",
+                  textAlign: "center",
+                  px: 2,
+                }}
+              >
+                I build large scale, business-forward data solutions driven by statistics and computation. Currently, I'm driving operational decisions with stochastic and time series analysis at <u>OO company</u>.
+              </Typography>
               <DockBar />
             </div>
           </div>
         </div>
       </div>
-      <IntroductionTransition />
-      <Project />
     </MuiThemeProvider>
   );
 }

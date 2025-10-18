@@ -49,6 +49,8 @@ const Particles = ({
   color = "#ffffff",
   vx = 0,
   vy = 0,
+  // Duration in ms for each segment (jump) from one point to the next
+  connectionSegmentMs = 50,
 }) => {
   const canvasRef = useRef(null);
   const canvasContainerRef = useRef(null);
@@ -58,17 +60,50 @@ const Particles = ({
   const mouse = useRef({ x: 0, y: 0 });
   const canvasSize = useRef({ w: 0, h: 0 });
   const dpr = typeof window !== "undefined" ? window.devicePixelRatio : 1;
+  const connectionAnimationProgress = useRef(0);
+  const animationStartTime = useRef(null);
+  const isAnimating = useRef(false);
+  const frozenCircles = useRef([]); // Store snapshot of particles when animation starts
+  const rafId = useRef(null); // Track requestAnimationFrame id for cleanup
+
+  // Listen for pulse trigger events
+  useEffect(() => {
+    console.log('Particles component mounted, setting up event listener');
+    const handleToggle = (event) => {
+      console.log('Particles received pulse trigger event');
+      // Start a new pulse animation and freeze current particle positions
+      connectionAnimationProgress.current = 0;
+      animationStartTime.current = Date.now();
+      isAnimating.current = true;
+      // Snapshot the current positions
+      frozenCircles.current = circles.current.map(c => ({
+        x: c.x,
+        y: c.y,
+        originalRef: c
+      }));
+    };
+    window.addEventListener('toggleParticleConnections', handleToggle);
+    return () => {
+      console.log('Particles component unmounting, removing event listener');
+      window.removeEventListener('toggleParticleConnections', handleToggle);
+    };
+  }, []);
 
   useEffect(() => {
     if (canvasRef.current) {
       context.current = canvasRef.current.getContext("2d");
     }
     initCanvas();
+    // Start animation loop and store raf id for cleanup
     animate();
     window.addEventListener("resize", initCanvas);
 
     return () => {
       window.removeEventListener("resize", initCanvas);
+      if (rafId.current) {
+        cancelAnimationFrame(rafId.current);
+        rafId.current = null;
+      }
     };
   }, [color]);
 
@@ -108,7 +143,9 @@ const Particles = ({
       canvasRef.current.height = canvasSize.current.h * dpr;
       canvasRef.current.style.width = `${canvasSize.current.w}px`;
       canvasRef.current.style.height = `${canvasSize.current.h}px`;
-      context.current.scale(dpr, dpr);
+      // Reset transform to avoid compounded scaling across resizes
+      context.current.setTransform(1, 0, 0, 1, 0, 0);
+      context.current.setTransform(dpr, 0, 0, dpr, 0, 0);
     }
   };
 
@@ -157,12 +194,141 @@ const Particles = ({
 
   const clearContext = () => {
     if (context.current) {
-      context.current.clearRect(
-        0,
-        0,
-        canvasSize.current.w,
-        canvasSize.current.h
-      );
+      // Clear using identity transform to cover full backing store
+      context.current.save();
+      context.current.setTransform(1, 0, 0, 1, 0, 0);
+      if (canvasRef.current) {
+        context.current.clearRect(0, 0, canvasRef.current.width, canvasRef.current.height);
+      } else {
+        context.current.clearRect(0, 0, canvasSize.current.w, canvasSize.current.h);
+      }
+      context.current.restore();
+    }
+  };
+
+  const drawConnections = () => {
+    if (!context.current) return;
+    if (!isAnimating.current) return;
+    
+    // Use frozen snapshot of particles to prevent flickering from particle movement
+    // Sort circles from bottom-left to top-right (by x - y diagonal)
+    const sortedCircles = [...frozenCircles.current].sort((a, b) => {
+      const diagA = a.x - a.y; // Diagonal position (bottom-left to top-right)
+      const diagB = b.x - b.y;
+      return diagA - diagB;
+    });
+    
+    // Build a continuous path by chaining particles (frozen positions for order only)
+    const minDistance = 20; // Minimum horizontal distance to consider
+    const maxVerticalDistance = 150; // Maximum vertical distance to consider
+
+    // Path points can be either fixed points or live particle refs
+    // Start with an imaginary point at bottom-left (0, viewport height)
+    const startFixedPoint = {
+      type: "fixed",
+      x: 0,
+      y: canvasSize.current.h,
+    };
+
+    // End with an imaginary point at top-right (viewport width, 0)
+    const endFixedPoint = {
+      type: "fixed",
+      x: canvasSize.current.w,
+      y: 0,
+    };
+
+    const chainRefs = [];
+
+    // Start chaining from the bottom-left-most particle in sorted order
+    if (sortedCircles.length > 0) {
+      chainRefs.push(sortedCircles[0].originalRef);
+      let currentParticle = sortedCircles[0];
+      const usedIndices = new Set([0]);
+
+      // Build path by finding next particle that goes right and up
+      while (chainRefs.length < sortedCircles.length) {
+        let nextParticle = null;
+        let bestIndex = -1;
+
+        for (let j = 0; j < sortedCircles.length; j++) {
+          if (usedIndices.has(j)) continue;
+
+          const candidate = sortedCircles[j];
+          const horizontalDistance = candidate.x - currentParticle.x;
+          const verticalDistance = currentParticle.y - candidate.y; // Positive means candidate is above
+
+          // Only consider particles that are to the right AND up, within vertical distance limit
+          if (
+            horizontalDistance >= minDistance &&
+            verticalDistance > 0 &&
+            verticalDistance <= maxVerticalDistance
+          ) {
+            nextParticle = candidate;
+            bestIndex = j;
+            break; // Take the first valid one in sorted order
+          }
+        }
+
+        if (nextParticle && bestIndex >= 0) {
+          chainRefs.push(nextParticle.originalRef);
+          usedIndices.add(bestIndex);
+          currentParticle = nextParticle;
+        } else {
+          break; // No more valid particles to connect
+        }
+      }
+    }
+
+    // Combine points: fixed start -> chained particle refs -> fixed end
+    const pathPoints = [startFixedPoint, ...chainRefs.map((ref) => ({ type: "live", ref })), endFixedPoint];
+
+    // Calculate the visible window of the line
+    const totalSegments = pathPoints.length - 1;
+    if (totalSegments <= 0) return;
+
+    // Update animation progress based on number of segments and per-segment duration
+    if (animationStartTime.current) {
+      const elapsed = Date.now() - animationStartTime.current;
+      const pulseDuration = Math.max(1, totalSegments * connectionSegmentMs);
+      const pulseProgress = Math.min(elapsed / pulseDuration, 1);
+
+      // Linear progress for continuous line growth
+      connectionAnimationProgress.current = pulseProgress;
+
+      // Stop animating when pulse is complete
+      if (pulseProgress >= 1) {
+        isAnimating.current = false;
+      }
+    }
+    const windowSize = 5; // Show only a handful of segments at a time
+    const currentPosition = connectionAnimationProgress.current * totalSegments;
+    const currentSegment = Math.floor(currentPosition);
+
+    // Draw the continuous line with bell curve opacity using current positions
+    context.current.lineWidth = 1;
+
+    const startSegment = Math.max(0, currentSegment - windowSize + 1);
+    const endSegment = Math.min(totalSegments, currentSegment + 1);
+
+    const getPos = (pt) => {
+      if (pt.type === "fixed") return { x: pt.x, y: pt.y };
+      const c = pt.ref;
+      return { x: c.x, y: c.y };
+    };
+
+    for (let i = startSegment; i < endSegment; i++) {
+      const distanceFromCurrent = currentSegment - i; // 0 = newest
+      let opacity = 0.7 * Math.exp(-Math.pow(distanceFromCurrent / 1.5, 2));
+      opacity = Math.max(0.1, Math.min(0.7, opacity));
+
+      const a = getPos(pathPoints[i]);
+      const b = getPos(pathPoints[i + 1]);
+
+      context.current.strokeStyle = `rgba(${rgb.join(", ")}, ${opacity})`;
+      context.current.beginPath();
+      context.current.moveTo(a.x, a.y);
+      context.current.lineTo(b.x, b.y);
+      context.current.stroke();
     }
   };
 
@@ -229,7 +395,12 @@ const Particles = ({
         // update the circle position
       }
     });
-    window.requestAnimationFrame(animate);
+    
+    // Draw connections after all particles
+    drawConnections();
+    
+    // Schedule next frame and keep the id for potential cancellation
+    rafId.current = window.requestAnimationFrame(animate);
   };
 
   return (
