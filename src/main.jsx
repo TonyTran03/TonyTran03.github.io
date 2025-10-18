@@ -5,12 +5,13 @@ import "./index.css";
 import Lenis from "@studio-freight/lenis";
 import { ThemeProvider } from "./components/ThemeContext.jsx";
 import { ParticlesConnectionProvider } from "./components/ParticlesConnectionContext.jsx";
+import MinimalPillNavbar from "./components/Nav";
 
 // Lenis smooth scroll setup
 const lenis = new Lenis({
-  duration: 1.2, // The duration of the smooth scroll
+  duration: 1.2,
   easing: (t) => Math.min(1, 1.001 - Math.pow(2, -10 * t)),
-  smooth: true, // Enable/disable smooth scrolling
+  smooth: true,
 });
 
 function raf(time) {
@@ -25,6 +26,7 @@ createRoot(document.getElementById("root")).render(
   <StrictMode>
     <ThemeProvider>
       <ParticlesConnectionProvider>
+        <MinimalPillNavbar />
         <App />
       </ParticlesConnectionProvider>
     </ThemeProvider>

@@ -2,7 +2,6 @@ import React, { useEffect } from "react";
 import "./App.css";
 import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
 import Intro from "./pages/Intro";
-import Projects from "./pages/Projects";
 
 // Lerp function to smooth the transition
 const lerp = (start, end, factor) => {
@@ -55,14 +54,19 @@ function App() {
       {/* Only render cursor elements if not on mobile - outside of main div */}
       {window.innerWidth > 768 && (
         <>
-          <div className="cursor-inner" style={{ top: '0px', left: '0px' }}></div>
-          <div className="cursor-outer" style={{ top: '0px', left: '0px' }}></div>
+          <div
+            className="cursor-inner"
+            style={{ top: "0px", left: "0px" }}
+          ></div>
+          <div
+            className="cursor-outer"
+            style={{ top: "0px", left: "0px" }}
+          ></div>
         </>
       )}
       <div>
         <Routes>
           <Route index element={<Intro />} />
-          <Route path="/projects" element={<Projects />} />
         </Routes>
       </div>
     </Router>

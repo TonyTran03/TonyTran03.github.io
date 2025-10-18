@@ -17,7 +17,7 @@ import { useGSAP } from "@gsap/react";
 import IntroductionTransition from "./IntroductionTransition.jsx";
 import { BackgroundEffects } from "../components/BackgroundEffects";
 import LoadingScreen from "../components/LoadingScreen.jsx";
-
+import NoiseLineRelative from "../components/NoiseLineRelative";
 import "./Intro.css";
 import Project from "./Project.jsx";
 
@@ -59,10 +59,7 @@ export default function Intro() {
   return (
     <MuiThemeProvider theme={muiTheme}>
       {isLoading && <LoadingScreen onLoadingComplete={handleLoadingComplete} />}
-      <div
-        ref={contentRef}
-        style={{ opacity: 0 }}
-      >
+      <div ref={contentRef} style={{ opacity: 0 }}>
         <div className="w-full h-screen bg-[var(--cookies)]">
           <BackgroundEffects isDayMode={isDayMode} />
 
@@ -92,28 +89,43 @@ export default function Intro() {
               <Typography
                 sx={{
                   ml: 4,
-                  pt: 3,
+                  pt: 4,
                   fontSize: "2rem",
                   fontFamily: "CustomFont, sans-serif",
-                  fontStyle: "italic",
+                  fontStyle: "bold",
                 }}
               >
-                Software Developer
+                <u>Data Scientist</u>
               </Typography>
               <Typography
                 sx={{
-                  mt: 2,
+                  mt: 0.5,
                   fontSize: "1rem",
                   fontFamily: "Poppins, sans-serif",
                   color: isDayMode ? "#666" : "#aaa",
-                  maxWidth: "600px",
+                  maxWidth: "420px",
                   textAlign: "center",
                   px: 2,
                 }}
               >
-                I build large scale, business-forward data solutions driven by statistics and computation. Currently, I'm driving operational decisions with stochastic and time series analysis at <u>OO company</u>.
+                I build large scale, business-forward data solutions driven by
+                statistics and computation. Currently, I'm driving operational
+                decisions with stochastic and time series analysis.
               </Typography>
               <DockBar />
+
+              {/* Noise line driven by particles */}
+              <div className="w-full max-w-[920px] px-6">
+                <NoiseLineRelative
+                  height={68}
+                  thickness={1.5}
+                  color={
+                    isDayMode ? "rgba(25,31,44,0.78)" : "rgba(233,236,239,0.9)"
+                  }
+                  smoothing={0.6}
+                  horizontalScale={1.0}
+                />
+              </div>
             </div>
           </div>
         </div>

@@ -68,24 +68,24 @@ const Particles = ({
 
   // Listen for pulse trigger events
   useEffect(() => {
-    console.log('Particles component mounted, setting up event listener');
+    console.log("Particles component mounted, setting up event listener");
     const handleToggle = (event) => {
-      console.log('Particles received pulse trigger event');
+      console.log("Particles received pulse trigger event");
       // Start a new pulse animation and freeze current particle positions
       connectionAnimationProgress.current = 0;
       animationStartTime.current = Date.now();
       isAnimating.current = true;
       // Snapshot the current positions
-      frozenCircles.current = circles.current.map(c => ({
+      frozenCircles.current = circles.current.map((c) => ({
         x: c.x,
         y: c.y,
-        originalRef: c
+        originalRef: c,
       }));
     };
-    window.addEventListener('toggleParticleConnections', handleToggle);
+    window.addEventListener("toggleParticleConnections", handleToggle);
     return () => {
-      console.log('Particles component unmounting, removing event listener');
-      window.removeEventListener('toggleParticleConnections', handleToggle);
+      console.log("Particles component unmounting, removing event listener");
+      window.removeEventListener("toggleParticleConnections", handleToggle);
     };
   }, []);
 
@@ -198,138 +198,91 @@ const Particles = ({
       context.current.save();
       context.current.setTransform(1, 0, 0, 1, 0, 0);
       if (canvasRef.current) {
-        context.current.clearRect(0, 0, canvasRef.current.width, canvasRef.current.height);
+        context.current.clearRect(
+          0,
+          0,
+          canvasRef.current.width,
+          canvasRef.current.height
+        );
       } else {
-        context.current.clearRect(0, 0, canvasSize.current.w, canvasSize.current.h);
+        context.current.clearRect(
+          0,
+          0,
+          canvasSize.current.w,
+          canvasSize.current.h
+        );
       }
       context.current.restore();
     }
   };
 
   const drawConnections = () => {
-    if (!context.current) return;
-    if (!isAnimating.current) return;
-    
-    // Use frozen snapshot of particles to prevent flickering from particle movement
-    // Sort circles from bottom-left to top-right (by x - y diagonal)
-    const sortedCircles = [...frozenCircles.current].sort((a, b) => {
-      const diagA = a.x - a.y; // Diagonal position (bottom-left to top-right)
-      const diagB = b.x - b.y;
-      return diagA - diagB;
-    });
-    
-    // Build a continuous path by chaining particles (frozen positions for order only)
-    const minDistance = 20; // Minimum horizontal distance to consider
-    const maxVerticalDistance = 150; // Maximum vertical distance to consider
+    if (!context.current || !isAnimating.current) return;
+    if (!frozenCircles.current || frozenCircles.current.length === 0) return;
 
-    // Path points can be either fixed points or live particle refs
-    // Start with an imaginary point at bottom-left (0, viewport height)
-    const startFixedPoint = {
-      type: "fixed",
-      x: 0,
-      y: canvasSize.current.h,
-    };
+    const W = canvasSize.current.w;
+    const H = canvasSize.current.h;
 
-    // End with an imaginary point at top-right (viewport width, 0)
-    const endFixedPoint = {
-      type: "fixed",
-      x: canvasSize.current.w,
-      y: 0,
-    };
+    // ---- Config ---------------------------------------------------
+    const WINDOW_POINTS = Math.min(80, Math.max(20, Math.floor(W / 16))); // short clean window
+    const DOT_RADIUS = 2.2; // dot size
+    const RED = [239, 68, 68]; // tailwind red-500-ish
+    const BLUE = [59, 130, 246]; // tailwind blue-500-ish
+    // ---------------------------------------------------------------
 
-    const chainRefs = [];
+    // 1) Sort snapshot by x (left -> right)
+    const sortedByX = [...frozenCircles.current].sort((a, b) => a.x - b.x);
 
-    // Start chaining from the bottom-left-most particle in sorted order
-    if (sortedCircles.length > 0) {
-      chainRefs.push(sortedCircles[0].originalRef);
-      let currentParticle = sortedCircles[0];
-      const usedIndices = new Set([0]);
+    // 2) Progress 0 -> 1 across entire width
+    if (animationStartTime.current == null)
+      animationStartTime.current = Date.now();
+    const elapsed = Date.now() - animationStartTime.current;
+    const pulseDuration = Math.max(
+      1,
+      (sortedByX.length - 1) * connectionSegmentMs
+    );
+    const progress = Math.min(elapsed / pulseDuration, 1);
 
-      // Build path by finding next particle that goes right and up
-      while (chainRefs.length < sortedCircles.length) {
-        let nextParticle = null;
-        let bestIndex = -1;
+    // 3) End index advances with progress; short fixed window behind it
+    let endIdx = Math.floor(progress * (sortedByX.length - 1));
+    endIdx = Math.min(sortedByX.length - 1, Math.max(0, endIdx));
+    const startIdx = Math.max(0, endIdx - WINDOW_POINTS + 1);
 
-        for (let j = 0; j < sortedCircles.length; j++) {
-          if (usedIndices.has(j)) continue;
-
-          const candidate = sortedCircles[j];
-          const horizontalDistance = candidate.x - currentParticle.x;
-          const verticalDistance = currentParticle.y - candidate.y; // Positive means candidate is above
-
-          // Only consider particles that are to the right AND up, within vertical distance limit
-          if (
-            horizontalDistance >= minDistance &&
-            verticalDistance > 0 &&
-            verticalDistance <= maxVerticalDistance
-          ) {
-            nextParticle = candidate;
-            bestIndex = j;
-            break; // Take the first valid one in sorted order
-          }
-        }
-
-        if (nextParticle && bestIndex >= 0) {
-          chainRefs.push(nextParticle.originalRef);
-          usedIndices.add(bestIndex);
-          currentParticle = nextParticle;
-        } else {
-          break; // No more valid particles to connect
-        }
-      }
+    // 4) Build live window (left -> right)
+    const windowPolyline = [];
+    for (let i = startIdx; i <= endIdx; i++) {
+      const live = sortedByX[i].originalRef; // follow live motion
+      windowPolyline.push({ x: live.x, y: live.y });
     }
+    if (windowPolyline.length < 2) return;
 
-    // Combine points: fixed start -> chained particle refs -> fixed end
-    const pathPoints = [startFixedPoint, ...chainRefs.map((ref) => ({ type: "live", ref })), endFixedPoint];
+    // 5) DRAW DOTS (alternate red/blue), fade at edges
+    for (let i = 0; i < windowPolyline.length; i++) {
+      const p = windowPolyline[i];
+      const t = i / (windowPolyline.length - 1); // 0..1 across window
+      const edgeFade = Math.min(t, 1 - t); // fade at both ends
+      const alpha = 0.35 + 0.45 * (edgeFade * 2); // 0.35..0.80
 
-    // Calculate the visible window of the line
-    const totalSegments = pathPoints.length - 1;
-    if (totalSegments <= 0) return;
-
-    // Update animation progress based on number of segments and per-segment duration
-    if (animationStartTime.current) {
-      const elapsed = Date.now() - animationStartTime.current;
-      const pulseDuration = Math.max(1, totalSegments * connectionSegmentMs);
-      const pulseProgress = Math.min(elapsed / pulseDuration, 1);
-
-      // Linear progress for continuous line growth
-      connectionAnimationProgress.current = pulseProgress;
-
-      // Stop animating when pulse is complete
-      if (pulseProgress >= 1) {
-        isAnimating.current = false;
-      }
-    }
-    const windowSize = 5; // Show only a handful of segments at a time
-    const currentPosition = connectionAnimationProgress.current * totalSegments;
-    const currentSegment = Math.floor(currentPosition);
-
-    // Draw the continuous line with bell curve opacity using current positions
-    context.current.lineWidth = 1;
-
-    const startSegment = Math.max(0, currentSegment - windowSize + 1);
-    const endSegment = Math.min(totalSegments, currentSegment + 1);
-
-    const getPos = (pt) => {
-      if (pt.type === "fixed") return { x: pt.x, y: pt.y };
-      const c = pt.ref;
-      return { x: c.x, y: c.y };
-    };
-
-    for (let i = startSegment; i < endSegment; i++) {
-      const distanceFromCurrent = currentSegment - i; // 0 = newest
-      let opacity = 0.7 * Math.exp(-Math.pow(distanceFromCurrent / 1.5, 2));
-      opacity = Math.max(0.1, Math.min(0.7, opacity));
-
-      const a = getPos(pathPoints[i]);
-      const b = getPos(pathPoints[i + 1]);
-
-      context.current.strokeStyle = `rgba(${rgb.join(", ")}, ${opacity})`;
+      const color = i % 2 === 0 ? RED : BLUE;
+      context.current.fillStyle = `rgba(${color[0]}, ${color[1]}, ${color[2]}, ${alpha})`;
       context.current.beginPath();
-      context.current.moveTo(a.x, a.y);
-      context.current.lineTo(b.x, b.y);
-      context.current.stroke();
+      context.current.arc(p.x, p.y, DOT_RADIUS, 0, Math.PI * 2);
+      context.current.fill();
     }
+
+    // 6) Broadcast for the center graph (still works)
+    const evt = new CustomEvent("particleLineUpdate", {
+      detail: {
+        points: windowPolyline,
+        lastPoint: windowPolyline[windowPolyline.length - 1],
+        sourceSize: { w: W, h: H },
+        done: progress >= 1,
+      },
+    });
+    window.dispatchEvent(evt);
+
+    // 7) Stop at the far right
+    if (progress >= 1) isAnimating.current = false;
   };
 
   const drawParticles = () => {
@@ -395,10 +348,10 @@ const Particles = ({
         // update the circle position
       }
     });
-    
+
     // Draw connections after all particles
     drawConnections();
-    
+
     // Schedule next frame and keep the id for potential cancellation
     rafId.current = window.requestAnimationFrame(animate);
   };
