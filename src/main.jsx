@@ -5,7 +5,7 @@ import "./index.css";
 import Lenis from "@studio-freight/lenis";
 import { ThemeProvider } from "./components/ThemeContext.jsx";
 import { ParticlesConnectionProvider } from "./components/ParticlesConnectionContext.jsx";
-import MinimalPillNavbar from "./components/Nav";
+import CasinoCursor from "./components/CasinoCursor.jsx";
 
 // Lenis smooth scroll setup
 const lenis = new Lenis({
@@ -26,7 +26,7 @@ createRoot(document.getElementById("root")).render(
   <StrictMode>
     <ThemeProvider>
       <ParticlesConnectionProvider>
-        <MinimalPillNavbar />
+        <CasinoCursor />
         <App />
       </ParticlesConnectionProvider>
     </ThemeProvider>

@@ -1,33 +1,83 @@
+/* ---------- Projects / images ---------- */
 .imageBox {
   width: 70%;
   height: 50%;
   display: flex;
-
   align-items: center;
-  /* Optional: Add a border or background for visual clarity */
 
-  background-color: #f9f9f9;
-
+  /* Remove the demo background; it was showing behind the hero */
+  background-color: transparent; /* was #f9f9f9 */
   border-radius: 2px;
 }
 
 .imageBox img {
   width: 95%;
   height: 95%;
-  object-fit: cover; /* Ensures the image covers the container while keeping its aspect ratio */
-  border-radius: 8px; /* Optional: Rounded corners */
+  object-fit: cover;
+  border-radius: 8px;
 }
 
+/* Units were missing; this can break layout calculations */
 .projectItem {
-  width: 100;
+  width: 100%; /* was 100 */
   height: 50%;
 }
 
-
-
-.projectBoxes{
+.projectBoxes {
   width: 95%;
   height: 95%;
-  object-fit: cover; /* Ensures the image covers the container while keeping its aspect ratio */
-  border-radius: 8px; /* Optional: Rounded corners */
+  object-fit: cover;
+  border-radius: 8px;
+}
+
+/* ---------- Hero scale / palette ---------- */
+:root {
+  --hero-name: clamp(48px, 9vw, 112px);
+  --hero-sub: clamp(18px, 2.2vw, 26px);
+  --hero-body: clamp(14px, 1.2vw, 16px);
+  --hero-leading: 1.55;
+  --hero-gap-lg: clamp(20px, 3.5vh, 36px);
+  --hero-gap-md: clamp(12px, 2vh, 20px);
+  --ink: #0d1220;
+  --ink-subtle: #3a4252;
+  --ink-faint: #6b7280;
+}
+
+html[data-mode="day"] body {
+  color: var(--ink);
+}
+html[data-mode="night"] body {
+  color: #e5e7eb;
+}
+
+/* Underline style for subtitle */
+.min-underline {
+  text-decoration-thickness: 0.06em;
+  text-underline-offset: 0.18em;
+  text-decoration-color: currentColor;
+  text-decoration-skip-ink: auto;
+  opacity: 0.85;
+}
+
+/* Calm grain by default */
+#grain-bg {
+  opacity: 0.3;
+} /* a touch lower looks cleaner */
+
+/* Dock subtle */
+.dock-light button,
+.dock-light a {
+  box-shadow: none !important;
+  opacity: 0.9;
+}
+
+/* ---------- Hero spacing helpers ---------- */
+.hero-wrap {
+  /* keep hero comfortably below navbar without hard-coding pixels */
+  padding-top: clamp(56px, 12vh, 140px);
+}
+
+.hero-copy {
+  max-width: 36ch;
+  line-height: var(--hero-leading);
 }

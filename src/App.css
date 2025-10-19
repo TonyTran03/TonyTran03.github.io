@@ -1,27 +1,60 @@
+/* Hide OS cursor globally unless you toggle html[data-cursor="regular"] */
 body {
-  cursor: none; /* Hide the default cursor */
-  overflow-x: hidden;
+  cursor: none;
   background-color: var(--background);
   transition: background-color 0.5s ease, color 0.5s ease;
 }
 
-*, *::before, *::after {
-  transition: background-color 0.5s ease, color 0.5s ease, border-color 0.5s ease, fill 0.5s ease, stroke 0.5s ease;
-}
-
 .cursor-inner {
-  width: 12px;
-  height: 12px;
-  background-color: white;
-  border-radius: 50%;
+  --cursor-url: url("/cursors/openhand.svg");
   position: fixed;
   top: 0;
   left: 0;
-  transform: translate(-50%, -50%);
-  pointer-events: none; /* Prevent interaction */
-  mix-blend-mode: difference;
+  width: 44px;
+  height: 44px;
+  transform: translate(-50%, -50%) translateZ(0);
+  pointer-events: none;
   z-index: 9999;
+  background: var(--cursor-url) center/contain no-repeat;
+  /* no transform transition to avoid lag */
+  transition: opacity 0.15s ease;
+  will-change: transform;
 }
+
+.cursor-inner.is-point {
+  --cursor-url: url("/cursors/pointinghand.svg");
+  transform: translate(-50%, -50%) translateZ(0) rotate(-8deg);
+}
+.cursor-inner.is-down {
+  --cursor-url: url("/cursors/closedhand.svg");
+  transform: translate(-50%, -50%) translateZ(0) scale(0.95) rotate(-2deg);
+}
+.cursor-inner.is-hidden {
+  opacity: 0;
+}
+
+/* keep OS cursor off while custom active */
+html:not([data-cursor="regular"]) a,
+html:not([data-cursor="regular"]) button,
+html:not([data-cursor="regular"]) [role="button"],
+html:not([data-cursor="regular"]) input,
+html:not([data-cursor="regular"]) select,
+html:not([data-cursor="regular"]) textarea,
+html:not([data-cursor="regular"]) [data-cursor="link"] {
+  cursor: none !important;
+}
+
+/* fallback */
+html[data-cursor="regular"],
+html[data-cursor="regular"] * {
+  cursor: auto;
+}
+html[data-cursor="regular"] .cursor-inner {
+  opacity: 0;
+}
+
+/* (Keep the rest of your styles below) */
+
 #grain-bg {
   position: fixed;
   top: 0;
@@ -30,26 +63,4 @@ body {
   height: 100%;
   z-index: -1; /* Ensure it's behind other content */
   pointer-events: none; /* Prevent interaction */
-}
-.cursor-outer {
-  width: 40px;
-  height: 40px;
-  background-color: white;
-  border-radius: 50%;
-  position: fixed;
-  top: 0;
-  left: 0;
-  transform: translate(-50%, -50%);
-  transition: transform 0.1s ease-out;
-  pointer-events: none; /* Prevent interaction */
-  mix-blend-mode: difference;
-  will-change: transform;
-  z-index: 9998;
-}
-
-@media (max-width: 768px) {
-  .cursor-inner,
-  .cursor-outer {
-    display: none;
-  }
 }

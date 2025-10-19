@@ -7,6 +7,7 @@ export default function NoiseLineRelative({
   smoothing = 0.1, // 0 = sharp/ratchet
   capacityPx = 600, // how many samples to keep (~graph width in px)
   smoothWindow = 12, // moving-average window (de-trend)
+  startFlat = true,
 }) {
   const canvasRef = useRef(null);
   const ctxRef = useRef(null);
@@ -24,24 +25,27 @@ export default function NoiseLineRelative({
       canvas.width = Math.floor(w * dpr);
       canvas.height = Math.floor(h * dpr);
       ctxRef.current.setTransform(dpr, 0, 0, dpr, 0, 0);
-      draw();
+      draw(); // draw baseline immediately if needed
     };
 
     const onUpdate = (e) => {
       const { lastPoint, sourceSize } = e.detail || {};
       if (!lastPoint || !sourceSize) return;
 
-      // Normalize to hero canvas scale (keep amplitude reasonable)
+      // Normalize to our canvas height
       const scaleY = (canvasRef.current?.clientHeight || 1) / sourceSize.h;
-      // append normalized y
+
+      // Append normalized y
       historyRef.current.push(lastPoint.y * scaleY);
-      // cap length
+
+      // Cap length roughly to available pixels
       const max = Math.max(
         50,
         Math.floor(canvasRef.current?.clientWidth || capacityPx)
       );
-      if (historyRef.current.length > max)
+      if (historyRef.current.length > max) {
         historyRef.current.splice(0, historyRef.current.length - max);
+      }
 
       if (!rafRef.current) rafRef.current = requestAnimationFrame(draw);
     };
@@ -68,7 +72,19 @@ export default function NoiseLineRelative({
     const H = canvas.clientHeight;
     const baseY = H / 2;
 
-    // Copy and de-trend using a moving average
+    // If no data yet, draw a straight baseline (if startFlat)
+    if (historyRef.current.length < 2 && startFlat) {
+      ctx.clearRect(0, 0, W, H);
+      ctx.lineWidth = thickness;
+      ctx.strokeStyle = color;
+      ctx.beginPath();
+      ctx.moveTo(0, baseY);
+      ctx.lineTo(W, baseY);
+      ctx.stroke();
+      return;
+    }
+
+    // De-trend with a small moving average
     const src = historyRef.current;
     if (src.length < 2) {
       ctx.clearRect(0, 0, W, H);
@@ -81,7 +97,7 @@ export default function NoiseLineRelative({
       acc += src[i];
       if (i >= smoothWindow) acc -= src[i - smoothWindow];
       const win = Math.min(i + 1, smoothWindow);
-      smoothed[i] = src[i] - acc / win; // subtract local mean → wiggle about 0
+      smoothed[i] = src[i] - acc / win; // wiggle about 0
     }
 
     // Map across width left -> right

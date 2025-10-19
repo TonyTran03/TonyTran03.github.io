@@ -8,24 +8,27 @@ export const TextRevealByWord = ({ text, className }) => {
   const targetRef = useRef(null);
   const { scrollYProgress } = useScroll({
     target: targetRef,
-    offset: ["start start", "end end"], 
+    offset: ["start start", "end end"],
   });
 
   const words = text.split("");
   const [isDayMode, setIsDayMode] = useState(true);
 
   useEffect(() => {
-    const html = document.querySelector('html');
+    const html = document.querySelector("html");
 
     const observer = new MutationObserver(() => {
-      const mode = html.getAttribute('data-mode');
-      setIsDayMode(mode === 'day');
+      const mode = html.getAttribute("data-mode");
+      setIsDayMode(mode === "day");
     });
 
-    observer.observe(html, { attributes: true, attributeFilter: ['data-mode'] });
+    observer.observe(html, {
+      attributes: true,
+      attributeFilter: ["data-mode"],
+    });
 
-    const mode = html.getAttribute('data-mode');
-    setIsDayMode(mode === 'day');
+    const mode = html.getAttribute("data-mode");
+    setIsDayMode(mode === "day");
 
     return () => {
       observer.disconnect();
@@ -41,15 +44,15 @@ export const TextRevealByWord = ({ text, className }) => {
       >
         <Typography
           variant="h2"
-          className={className} 
+          className={className}
           sx={{
-            display: 'flex',
-            flexDirection: 'column',
-            alignItems: 'center',
-            fontFamily: 'Bebas Neue, sans-serif',
-            '-webkit-text-stroke': isDayMode ? '2px #000' : '2px #FFFFFF',
-            '-webkit-text-fill-color': 'transparent',
-            fontSize: '3rem',
+            display: "flex",
+            flexDirection: "column",
+            alignItems: "center",
+            fontFamily: "Bebas Neue, sans-serif",
+            "-webkit-text-stroke": isDayMode ? "2px #000" : "2px #FFFFFD",
+            "-webkit-text-fill-color": "transparent",
+            fontSize: "3rem",
           }}
         >
           {words.map((char, i) => {
@@ -57,7 +60,11 @@ export const TextRevealByWord = ({ text, className }) => {
             const end = start + 1 / words.length;
             const adjustedEnd = i === words.length - 1 ? end : end;
             return (
-              <Word key={i} progress={scrollYProgress} range={[start, adjustedEnd]}>
+              <Word
+                key={i}
+                progress={scrollYProgress}
+                range={[start, adjustedEnd]}
+              >
                 {char}
               </Word>
             );
