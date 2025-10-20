@@ -1,4 +1,4 @@
-// src/components/PhysicsDiceStage.jsx
+// MOVED INTO INTRO BECAUSE IT GOT CONFUSING
 import React, { useEffect, useRef, useState } from "react";
 import Matter, { Engine, Bodies, Composite, Body, Events } from "matter-js";
 import gsap from "gsap";

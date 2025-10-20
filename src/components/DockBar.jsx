@@ -1,6 +1,6 @@
 import React from "react";
 import { Dock, DockIcon } from "@/components/magicui/dock";
-import ModeToggle from "../components/ModeToggle";
+import ModeToggle from "./Not using/ModeToggle.jsx";
 import { useTheme } from "./ThemeContext.jsx"; // Import the custom hook
 import { useNavigate } from "react-router-dom";
 import { useParticlesConnection } from "./ParticlesConnectionContext";

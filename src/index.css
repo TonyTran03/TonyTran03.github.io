@@ -22,15 +22,21 @@
   font-weight: normal;
   font-style: normal;
 }
-
+@font-face {
+  font-family: "synonym";
+  src: url("/fonts/synonyn-Bold.otf") format("opentype");
+  font-weight: bold;
+  font-style: normal;
+}
 body.lock-scroll {
   overflow: hidden;
 }
 
 @layer base {
   :root {
-    --background: 60, 100%, 100%;
-    --cookies: rgb(255, 255, 253); /* Light mode value */
+    --background: 60 100% 100%;
+    --foreground: 222.2 84% 4.9%;
+    --cookies: 0 0% 16%;
     --iNeedDark: rgb(52, 52, 74);
     --iNeedGreen: rgb(207, 235, 223);
     --contentColor: #7a6fdf; /* Light mode value */

@@ -6,7 +6,7 @@
   align-items: center;
 
   /* Remove the demo background; it was showing behind the hero */
-  background-color: transparent; /* was #f9f9f9 */
+
   border-radius: 2px;
 }
 

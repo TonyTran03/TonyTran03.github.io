@@ -1,12 +1,19 @@
 /* Hide OS cursor globally unless you toggle html[data-cursor="regular"] */
 body {
   cursor: none;
-  background-color: var(--background);
+  background-color: hsl(var(--background));
   transition: background-color 0.5s ease, color 0.5s ease;
 }
+html,
+#root {
+  background: hsl(var(--background));
+}
 
+html {
+  scrollbar-gutter: stable both-edges;
+}
 .cursor-inner {
-  --cursor-url: url("/cursors/openhand.svg");
+  --cursor-url: url("/cursors/pointinghand.svg");
   position: fixed;
   top: 0;
   left: 0;
@@ -22,7 +29,7 @@ body {
 }
 
 .cursor-inner.is-point {
-  --cursor-url: url("/cursors/pointinghand.svg");
+  --cursor-url: url("/cursors/openhand.svg");
   transform: translate(-50%, -50%) translateZ(0) rotate(-8deg);
 }
 .cursor-inner.is-down {

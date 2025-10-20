@@ -6,9 +6,7 @@ import Intro from "./pages/Intro";
 function App() {
   return (
     <Router>
-      <Routes>
-        <Route index element={<Intro />} />
-      </Routes>
+      <Intro />
     </Router>
   );
 }

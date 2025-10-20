@@ -1,4 +1,3 @@
-// src/pages/Intro.jsx
 import React, { useEffect, useRef, useState } from "react";
 import "@fontsource/poppins";
 import {
@@ -11,6 +10,7 @@ import { ScrollTrigger } from "gsap/ScrollTrigger";
 import { BackgroundEffects } from "../components/BackgroundEffects";
 import LoadingScreen from "../components/LoadingScreen.jsx";
 import Matter, { Engine, Bodies, Composite, Body, Events } from "matter-js";
+import { Highlighter } from "../components/ui/highlighter.jsx";
 
 gsap.registerPlugin(ScrollTrigger);
 
@@ -35,7 +35,7 @@ const shuffle = (a) => {
   return x;
 };
 
-function DiceFace({ size = 26, face, rolling }) {
+function DiceFace({ size = 100, face, rolling }) {
   const [f, setF] = useState(face);
   useEffect(() => {
     if (!rolling) {
@@ -93,19 +93,39 @@ export default function Intro() {
   const frameRef = useRef(null);
   const stageRef = useRef(null);
 
+  // Measured stage size (fixes “0 width at first paint”)
+  const [stageSize, setStageSize] = useState({ w: 0, h: 0 });
+
   // Physics
   const engineRef = useRef(null);
   const bodiesRef = useRef([]);
   const rafRef = useRef(null);
   const dieEls = useRef([]);
+  const boxRef = useRef(148);
 
   const [assign, setAssign] = useState([1, 2, 3, 4]);
   const [rolling, setRolling] = useState([true, true, true, true]);
   const rollingRef = useRef(rolling);
   const [boxSize, setBoxSize] = useState(148);
   const [stageH, setStageH] = useState(520);
-  // Drag state ################################################
+
+  // Drag state
   const dragRef = useRef(null); // {i, startX, startY, lastX, lastY, lastT, moved}
+  const [hoverN, setHoverN] = useState(null); // 1..4 or null
+
+  const clamp = (v, min, max) => Math.max(min, Math.min(max, v));
+  const TARGET_AR = 16 / 6; // width / height
+  const MIN_H = 700; //
+  const MAX_H = 900;
+
+  const ROOF_INSET = 12;
+  const BOUNDS_PAD = 6;
+  const MAX_VX = 22;
+  const MAX_VY = 28;
+  const BOUNCE_DAMPING = 0.35;
+  const markedReadyRef = useRef(false);
+  const [stageReady, setStageReady] = useState(false);
+  const [introAnimReady, setIntroAnimReady] = useState(false);
 
   const toLocal = (e) => {
     const r = stageRef.current.getBoundingClientRect();
@@ -127,7 +147,12 @@ export default function Intro() {
       lastT: t,
       moved: false,
     };
-    // while dragging, cancel default text selection / clicks
+    const b = bodiesRef.current[i];
+    if (b) {
+      Body.setStatic(b, true);
+      Body.setVelocity(b, { x: 0, y: 0 });
+      Body.setAngularVelocity(b, 0);
+    }
     e.preventDefault();
   };
 
@@ -138,17 +163,30 @@ export default function Intro() {
       const b = bodiesRef.current[d.i];
       if (!b) return;
       const { x, y, t } = toLocal(e);
-      const dx = x - d.lastX,
-        dy = y - d.lastY;
-      if (Math.hypot(x - d.startX, y - d.startY) > 6) d.moved = true;
-      // follow pointer
-      Body.setPosition(b, { x, y });
-      // give a little spin based on lateral motion
-      Body.setAngularVelocity(b, Math.max(-3, Math.min(3, dx * 0.02)));
-      d.lastX = x;
-      d.lastY = y;
+
+      const W = stageSize.w,
+        H = stageSize.h;
+      const half = boxRef.current / 2;
+
+      const left = half + 6;
+      const right = W - half - 6;
+      const top = ROOF_INSET + half;
+      const bottom = H - half - 6;
+
+      const cx = clamp(x, left, right);
+      const cy = clamp(y, top, bottom);
+
+      const dx = cx - d.lastX;
+      if (Math.hypot(cx - d.startX, cy - d.startY) > 6) d.moved = true;
+
+      Body.setPosition(b, { x: cx, y: cy });
+      Body.setAngularVelocity(b, Math.max(-3.5, Math.min(3.5, dx * 0.02)));
+
+      d.lastX = cx;
+      d.lastY = cy;
       d.lastT = t;
     };
+
     const up = (e) => {
       const d = dragRef.current;
       if (!d) return;
@@ -156,13 +194,20 @@ export default function Intro() {
       if (b) {
         const { x, y, t } = toLocal(e);
         const dt = Math.max(16, t - d.lastT);
-        // toss velocity scaled from last motion
-        const vx = ((x - d.lastX) / dt) * 16;
-        const vy = ((y - d.lastY) / dt) * 16;
-        Body.setVelocity(b, { x: vx, y: vy - 1.2 }); // a little upward flick
-      }
+        let vx = ((x - d.lastX) / dt) * 22;
+        let vy = ((y - d.lastY) / dt) * 22;
+        vx = Math.max(-MAX_VX, Math.min(MAX_VX, vx));
+        vy = Math.max(-MAX_VY, Math.min(MAX_VY, vy));
+        Body.setStatic(b, false);
 
-      // If it was a tap (no significant move), treat as click -> navigate
+        Matter.Sleeping.set(b, false);
+
+        const speed = Math.hypot(vx, vy);
+        if (speed < 0.05) {
+          Body.applyForce(b, b.position, { x: 0.0005, y: -0.001 }); // tiny upward/side tickle
+        }
+        Body.setVelocity(b, { x: vx, y: vy });
+      }
       if (!d.moved) {
         const n = assign[d.i];
         const m = sections.find((s) => s.n === n);
@@ -185,8 +230,7 @@ export default function Intro() {
       window.removeEventListener("pointerup", up);
       window.removeEventListener("pointercancel", up);
     };
-  }, [assign]);
-  // Drag state  END ################################################
+  }, [assign, stageSize.w, stageSize.h]);
 
   useEffect(() => {
     ScrollTrigger.refresh();
@@ -195,7 +239,26 @@ export default function Intro() {
     rollingRef.current = rolling;
   }, [rolling]);
 
-  // Fade in wrapper
+  // Playing-field height = viewport - (title bottom) - margin
+  useEffect(() => {
+    const calc = () => {
+      const w = frameRef.current?.clientWidth ?? 0;
+      if (!w) return;
+      const hFromAR = Math.round(w / TARGET_AR);
+      setStageH(clamp(hFromAR, MIN_H, MAX_H));
+    };
+    // initial + on resize
+    calc();
+    window.addEventListener("resize", calc);
+    // also re-run when fonts load or after loader in case widths shift
+    const id = requestAnimationFrame(calc);
+    return () => {
+      window.removeEventListener("resize", calc);
+      cancelAnimationFrame(id);
+    };
+  }, []);
+
+  // Measure stage size continuously
   useEffect(() => {
     if (!isLoading && contentRef.current) {
       gsap.fromTo(
@@ -205,74 +268,88 @@ export default function Intro() {
       );
     }
   }, [isLoading]);
-
-  // Compute “playing field” height = viewport - (title bottom) - margin
-  useEffect(() => {
-    const calc = () => {
-      const r = titleRowRef.current?.getBoundingClientRect();
-      const topCut = r?.bottom ?? 0;
-      const vh = window.innerHeight;
-      const bottomGap = 32;
-      const h = Math.max(340, vh - topCut - bottomGap);
-      setStageH(h);
-    };
-    calc();
-    window.addEventListener("resize", calc);
-    return () => window.removeEventListener("resize", calc);
-  }, []);
-
-  // Init Matter.js inside the stage
   useEffect(() => {
     const el = stageRef.current;
     if (!el) return;
 
-    const W = el.clientWidth;
-    const H = el.clientHeight;
+    const update = () => {
+      const w = el.clientWidth || 0;
+      const h = el.clientHeight || 0;
+      setStageSize((s) => (s.w !== w || s.h !== h ? { w, h } : s));
+    };
 
-    // Tile size from width
-    const size = Math.round(Math.min(200, Math.max(132, Math.floor(W / 4.2))));
+    const ro = new ResizeObserver(update);
+    ro.observe(el);
+    window.addEventListener("resize", update);
+    // do an immediate read too
+    update();
+
+    return () => {
+      ro.disconnect();
+      window.removeEventListener("resize", update);
+    };
+  }, []);
+
+  // Init Matter.js once we have a real stage size; rebuild on size change
+  useEffect(() => {
+    const el = stageRef.current;
+    if (!el) return;
+
+    const W = stageSize.w,
+      H = stageSize.h;
+    if (W < 50 || H < 50) return; // guard against first zero paint
+
+    const byW = (W - 48) / 4;
+    const byH = (H - 64) / 2.2;
+    const size = Math.round(clamp(Math.min(byW, byH), 132, 260));
     setBoxSize(size);
+    boxRef.current = size;
 
     const engine = Engine.create({ gravity: { x: 0, y: 1 } });
+    engine.enableSleeping = true;
+    engine.positionIterations = 10; // default 6
+    engine.velocityIterations = 8; // default 4
     engineRef.current = engine;
 
-    // World bounds strictly inside the stage (floor at the visual bottom)
     const wall = (x, y, w, h) =>
       Bodies.rectangle(x, y, w, h, {
         isStatic: true,
-        restitution: 0.8,
+        restitution: 0,
+        friction: 1,
+        frictionStatic: 1,
         render: { visible: false },
       });
 
     const thick = 60;
-    const floorLift = 0.5; // nudge up ~0.5px so it visually kisses the border
     const walls = [
-      wall(W / 2, H - floorLift + thick / 2, W, thick), // floor = frame bottom
-      wall(W / 2, 0 - thick / 2, W, thick), // ceiling
-      wall(0 - thick / 2, H / 2, thick, H), // left
-      wall(W + thick / 2, H / 2, thick, H), // right
+      wall(W / 2, H - 0.5 + thick / 2, W, thick),
+      wall(W / 2, ROOF_INSET - thick / 2, W, thick),
+      wall(0 - thick / 2, H / 2, thick, H),
+      wall(W + thick / 2, H / 2, thick, H),
     ];
 
     const die = (x, y) =>
       Bodies.rectangle(x, y, size, size, {
-        chamfer: { radius: 26 },
-        restitution: 0.68,
-        friction: 0.12,
-        frictionAir: 0.018,
-        density: 0.0028,
+        chamfer: { radius: 16 }, // was 26
+        restitution: 0.04, // was 0.18
+        friction: 0.8, // was 0.35
+        frictionStatic: 1.0, // was 0.6
+        frictionAir: 0.02, // was 0.035
+        density: 0.006, // was 0.0045
+        sleepThreshold: 30, // settle easier on stacks
       });
 
     const dice = [
-      die(W * 0.3, H * 0.18),
-      die(W * 0.48, H * 0.12),
-      die(W * 0.66, H * 0.18),
-      die(W * 0.57, H * 0.1),
+      die(W * 0.28, H * 0.15),
+      die(W * 0.46, H * 0.12),
+      die(W * 0.64, H * 0.16),
+      die(W * 0.54, H * 0.1),
     ];
 
     Composite.add(engine.world, [...walls, ...dice]);
     bodiesRef.current = dice;
 
-    // reshuffle numbers when dice hit each other
+    // reshuffle on dice-dice collisions
     const reshuffle = (() => {
       let lock = false;
       return () => {
@@ -292,23 +369,65 @@ export default function Intro() {
       }
     });
 
-    // RAF loop maps physics -> DOM transforms
+    // RAF loop
     const loop = () => {
-      const ds = bodiesRef.current;
       const next = [...rollingRef.current];
-      for (let i = 0; i < ds.length; i++) {
-        const { position, angle, velocity } = ds[i];
-        const moving = Math.hypot(velocity.x, velocity.y) > 0.35;
-        if (moving !== next[i]) next[i] = moving;
-        const elBtn = dieEls.current[i];
-        if (elBtn) {
-          elBtn.style.transform = `translate(${position.x - size / 2}px, ${
-            position.y - size / 2
-          }px) rotate(${angle}rad)`;
+      const sz = boxRef.current;
+      const half = sz / 2;
+
+      for (let i = 0; i < dice.length; i++) {
+        const b = dice[i];
+        let { x, y } = b.position;
+        let { x: vx, y: vy } = b.velocity;
+
+        vx = Math.max(-MAX_VX, Math.min(MAX_VX, vx));
+        vy = Math.max(-MAX_VY, Math.min(MAX_VY, vy));
+        if (vx !== b.velocity.x || vy !== b.velocity.y)
+          Body.setVelocity(b, { x: vx, y: vy });
+
+        const minX = half + BOUNDS_PAD;
+        const maxX = W - half - BOUNDS_PAD;
+        const minY = ROOF_INSET + half;
+        const maxY = H - half - BOUNDS_PAD;
+
+        if (x < minX) {
+          x = minX;
+          Body.setPosition(b, { x, y });
+          Body.setVelocity(b, { x: Math.abs(vx) * BOUNCE_DAMPING, y: vy });
+        } else if (x > maxX) {
+          x = maxX;
+          Body.setPosition(b, { x, y });
+          Body.setVelocity(b, { x: -Math.abs(vx) * BOUNCE_DAMPING, y: vy });
         }
+
+        if (y < minY) {
+          y = minY;
+          Body.setPosition(b, { x, y });
+          Body.setVelocity(b, { x: vx, y: Math.abs(vy) * BOUNCE_DAMPING });
+        } else if (y > maxY) {
+          y = maxY;
+          Body.setPosition(b, { x, y });
+          Body.setVelocity(b, { x: vx, y: -Math.abs(vy) * BOUNCE_DAMPING });
+        }
+
+        const moving = Math.hypot(vx, vy) > 0.35;
+        if (moving !== next[i]) next[i] = moving;
+
+        const elBtn = dieEls.current[i];
+        if (elBtn)
+          elBtn.style.transform = `translate(${x - half}px, ${
+            y - half
+          }px) rotate(${b.angle}rad)`;
       }
+
       if (next.some((v, i) => v !== rollingRef.current[i])) setRolling(next);
       Engine.update(engine, 1000 / 60);
+
+      if (!stageReady) {
+        markedReadyRef.current = true;
+        requestAnimationFrame(() => setStageReady(true));
+      }
+
       rafRef.current = requestAnimationFrame(loop);
     };
     rafRef.current = requestAnimationFrame(loop);
@@ -319,29 +438,7 @@ export default function Intro() {
       engineRef.current = null;
       bodiesRef.current = [];
     };
-  }, [stageH]);
-
-  const toss = (i) => {
-    const b = bodiesRef.current[i];
-    if (!b) return;
-    const angle = (Math.random() * Math.PI) / 2 - Math.PI / 4;
-    const power = 0.035 + Math.random() * 0.045;
-    Body.applyForce(b, b.position, {
-      x: power * Math.cos(angle),
-      y: -Math.abs(power * Math.sin(angle)) - 0.05,
-    });
-    Body.setAngularVelocity(
-      b,
-      (Math.random() < 0.5 ? -1 : 1) * (1.1 + Math.random() * 1.6)
-    );
-    const el = dieEls.current[i];
-    if (el)
-      gsap.fromTo(
-        el,
-        { scale: 0.985 },
-        { scale: 1, duration: 0.18, ease: "power2.out" }
-      );
-  };
+  }, [stageSize.w, stageSize.h]);
 
   const scrollToId = (id) => {
     const el = document.getElementById(id);
@@ -356,98 +453,153 @@ export default function Intro() {
     return () => clearInterval(id);
   }, []);
 
+  useEffect(() => {
+    boxRef.current = boxSize;
+  }, [boxSize]);
+
   return (
     <MuiThemeProvider theme={muiTheme}>
-      {isLoading && (
-        <LoadingScreen onLoadingComplete={() => setIsLoading(false)} />
-      )}
-      <div ref={contentRef} style={{ opacity: 0 }}>
-        <div className="min-h-screen bg-[var(--background)] relative">
+      <LoadingScreen
+        active={isLoading}
+        ready={stageReady}
+        minDuration={2000}
+        safetyTimeout={6000}
+        onLoadingComplete={() => {
+          setIsLoading(false);
+          // delay intro animations slightly so the loader is fully gone
+          setTimeout(() => setIntroAnimReady(true), 350);
+        }}
+      />
+
+      <div ref={contentRef}>
+        <div className="min-h-screen bg-[hsl(var(--background))] relative">
           <BackgroundEffects isDayMode={isDayMode} />
 
           {/* HERO */}
-          <section className="mx-auto max-w-6xl px-4 pt-28 md:pt-32 lg:pt-36">
+          <section className="mx-auto max-w-6xl px-4 pt-16 md:pt-20 lg:pt-24">
             <div
               ref={titleRowRef}
               className="grid md:grid-cols-[1fr,420px] gap-10 items-start mb-4"
             >
-              <h1 className="text-[clamp(40px,8.5vw,88px)] leading-[1.06] tracking-[-0.01em] font-[530] font-[CustomFont,ui-sans-serif]">
-                Tony Tran
+              <h1 className="text-[clamp(40px,8.5vw,88px)] leading-[1.06] tracking-[-0.01em] font-[530] font-[synonym,ui-sans-serif]">
+                {introAnimReady ? (
+                  <Highlighter action="underline" color="#FF9800">
+                    Tony Tran
+                  </Highlighter>
+                ) : (
+                  // render plain text until we kick off the highlight animation
+                  "Tony Tran"
+                )}
               </h1>
             </div>
 
-            {/* Thin rounded frame that exactly fits the playing field */}
+            {/* Frame that fits the playing field */}
             <div
               ref={frameRef}
               className="relative rounded-[22px] md:rounded-[28px] border border-black/10 dark:border-white/10 overflow-hidden"
               style={{ height: stageH }}
             >
-              {/* minimal inner bevel */}
               <div
-                className="pointer-events-none absolute inset-0"
+                className="pointer-events-none absolute inset-x-0 bottom-0 h-6 bg-gradient-to-t from-black/5 to-transparent"
                 style={{ boxShadow: "inset 0 0 0 1px rgba(255,255,255,.04)" }}
               />
 
-              {/* ToC (sticky to viewport left, unchanged) */}
-              <aside className="fixed left-4 sm:left-5 top-28 z-40 select-none">
-                <ol className="space-y-1.5">
-                  {sections.map((s) => (
-                    <li key={s.id}>
-                      <button
-                        onClick={() => scrollToId(s.id)}
-                        className="group flex items-baseline gap-2 text-[13px] text-zinc-700 dark:text-zinc-300 hover:text-zinc-900 dark:hover:text-white"
-                      >
-                        <span className="w-4 text-right font-mono text-[12px] opacity-60">
-                          {s.n}
-                        </span>
-                        <span className="font-mono text-[11px] opacity-50">
-                          #
-                        </span>
-                        <span className="underline decoration-zinc-400/50 underline-offset-[6px] decoration-1 group-hover:decoration-zinc-600/80">
-                          {s.label}
-                        </span>
-                      </button>
-                    </li>
-                  ))}
+              {/* TOC */}
+              {/* TOC */}
+              <aside className="fixed left-6 xl:left-9 top-1/2 -translate-y-1/2 z-40 select-none">
+                <ol className="space-y-3">
+                  {sections.map((s) => {
+                    const isActive = hoverN === s.n;
+                    return (
+                      <li key={s.id}>
+                        <button
+                          onClick={() => scrollToId(s.id)}
+                          onPointerEnter={() => setHoverN(s.n)}
+                          onPointerLeave={() => setHoverN(null)}
+                          className="group flex items-baseline gap-3"
+                          style={{ lineHeight: 1.04 }}
+                        >
+                          <span
+                            className="font-mono select-none"
+                            style={{
+                              fontSize: "clamp(32px, 5vw, 64px)",
+                              WebkitTextStroke: "1.2px currentColor",
+                              color: "transparent",
+                              opacity: 0.9,
+                            }}
+                          >
+                            {s.n}
+                          </span>
+                          <span
+                            className="font-mono select-none"
+                            style={{
+                              fontSize: "clamp(18px, 2vw, 28px)",
+                              WebkitTextStroke: "1px currentColor",
+                              color: "transparent",
+                              opacity: 0.6,
+                            }}
+                          >
+                            #
+                          </span>
+
+                          <Highlighter
+                            action="highlight"
+                            color="#87CEFA"
+                            active={isActive}
+                          >
+                            <span
+                              className="select-none underline underline-offset-[10px] decoration-[3px]"
+                              style={{
+                                fontSize: "clamp(28px, 3.5vw, 48px)",
+                                WebkitTextStroke: "1px currentColor",
+                                color: "currentColor",
+                                opacity: isActive ? 1 : 0.85,
+                                transition: "opacity .15s linear",
+                              }}
+                            >
+                              {s.label}
+                            </span>
+                          </Highlighter>
+                        </button>
+                      </li>
+                    );
+                  })}
                 </ol>
               </aside>
 
-              {/* DICE STAGE (physics + DOM-mapped tiles) */}
+              {/* DICE STAGE */}
               <div
                 ref={stageRef}
                 className="relative mx-auto max-w-7xl h-full overflow-hidden"
               >
                 <div className="absolute inset-0">
-                  {Array.from({ length: 4 }).map((_, i) => {
-                    const label = sections.find(
-                      (s) => s.n === assign[i]
-                    )?.label;
-                    return (
-                      <button
-                        key={i}
-                        ref={(el) => (dieEls.current[i] = el)}
-                        onPointerDown={onPointerDown(i)}
-                        className="absolute will-change-transform rounded-[28px] border border-zinc-900/10 dark:border-white/10
-             bg-white/80 dark:bg-zinc-900/70 backdrop-blur
-             shadow-[0_8px_40px_-12px_rgba(0,0,0,.18)] overflow-hidden select-none"
-                        style={{
-                          width: boxSize,
-                          height: boxSize,
-                          touchAction: "none",
-                        }}
-                        aria-label={
-                          sections.find((s) => s.n === assign[i])?.label
-                        }
-                      >
-                        <div className="absolute inset-0 grid place-items-center pointer-events-none">
-                          <DiceFace face={assign[i]} rolling={rolling[i]} />
-                        </div>
-                        <div className="absolute bottom-2 left-3 text-[12px] opacity-70 pointer-events-none">
-                          {sections.find((s) => s.n === assign[i])?.label}
-                        </div>
-                      </button>
-                    );
-                  })}
+                  {Array.from({ length: 4 }).map((_, i) => (
+                    <button
+                      key={i}
+                      ref={(el) => (dieEls.current[i] = el)}
+                      onPointerEnter={() => setHoverN(assign[i])}
+                      onPointerLeave={() => setHoverN(null)}
+                      onPointerDown={onPointerDown(i)}
+                      className={`absolute will-change-transform rounded-[28px] border border-zinc-900/10 dark:border-white/10 bg-white/80 dark:bg-zinc-900/70 backdrop-blur shadow-[0_8px_40px_-12px_rgba(0,0,0,.18)] overflow-hidden select-none ${
+                        hoverN === assign[i] ? "ring-4 ring-black" : "ring-0"
+                      }`}
+                      style={{
+                        width: boxSize,
+                        height: boxSize,
+                        touchAction: "none",
+                      }}
+                      aria-label={
+                        sections.find((s) => s.n === assign[i])?.label
+                      }
+                    >
+                      <div className="absolute inset-0 grid place-items-center pointer-events-none">
+                        <DiceFace face={assign[i]} rolling={rolling[i]} />
+                      </div>
+                      <div className="absolute bottom-2 left-3 text-[12px] opacity-70 pointer-events-none">
+                        {sections.find((s) => s.n === assign[i])?.label}
+                      </div>
+                    </button>
+                  ))}
                 </div>
               </div>
             </div>
