@@ -32,6 +32,7 @@ export default function Intro() {
   const refName = useRef();
   const introSectionRef = useRef();
 
+  // Intro.jsx (only the GSAP part changes + one extra tween)
   useGSAP(() => {
     const isMobile = window.innerWidth <= 500;
     if (!isMobile) {
@@ -42,14 +43,24 @@ export default function Intro() {
           end: "bottom+=30% center+=10%",
           scrub: true,
           pin: refName.current,
+          pinSpacing: true,
           markers: false,
         },
       });
 
+      // fade/slide hero out
       tl.fromTo(
         refName.current,
         { opacity: 1, y: 0 },
-        { opacity: 0, y: -200, duration: 1, ease: "power1.inOut" }
+        { opacity: 0, y: -200, ease: "power1.inOut" }
+      );
+
+      // fade/slide the cards in (the next section)
+      tl.fromTo(
+        "#intro-cards",
+        { opacity: 0, y: 60 },
+        { opacity: 1, y: 0, ease: "power2.out" },
+        "-=0.35" // slight overlap for a seamless handoff
       );
     }
   }, []);
@@ -99,10 +110,9 @@ export default function Intro() {
                   pt: 3,
                   fontSize: "2rem",
                   fontFamily: "CustomFont, sans-serif",
-                  fontStyle: "italic",
                 }}
               >
-                Software Developer
+                Statistical Science
               </Typography>
               <DockBar />
             </div>

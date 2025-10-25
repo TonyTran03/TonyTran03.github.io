@@ -1,7 +1,7 @@
 import React from "react";
 import { Dock, DockIcon } from "@/components/magicui/dock";
-import ModeToggle from '../components/ModeToggle';
-import { useTheme } from './ThemeContext.jsx'; // Import the custom hook
+import ModeToggle from "../components/ModeToggle";
+import { useTheme } from "./ThemeContext.jsx";
 
 const Icons = {
   gitHub: (props) => (
@@ -12,35 +12,73 @@ const Icons = {
       />
     </svg>
   ),
-  Linkedin: (props) => (
+  linkedin: (props) => (
     <svg viewBox="0 0 448 512" {...props}>
-      <path fill="currentColor" d="M416 32H31.9C14.3 32 0 46.5 0 64.3v383.4C0 465.5 14.3 480 31.9 480H416c17.6 0 32-14.5 32-32.3V64.3c0-17.8-14.4-32.3-32-32.3zM135.4 416H69V202.2h66.5V416zm-33.2-243c-21.3 0-38.5-17.3-38.5-38.5S80.9 96 102.2 96c21.2 0 38.5 17.3 38.5 38.5 0 21.3-17.2 38.5-38.5 38.5zm282.1 243h-66.4V312c0-24.8-.5-56.7-34.5-56.7-34.6 0-39.9 27-39.9 54.9V416h-66.4V202.2h63.7v29.2h.9c8.9-16.8 30.6-34.5 62.9-34.5 67.2 0 79.7 44.3 79.7 101.9V416z"/>
+      <path
+        fill="currentColor"
+        d="M416 32H31.9C14.3 32 0 46.5 0 64.3v383.4C0 465.5 14.3 480 31.9 480H416c17.6 0 32-14.5 32-32.3V64.3c0-17.8-14.4-32.3-32-32.3zM135.4 416H69V202.2h66.5V416zm-33.2-243c-21.3 0-38.5-17.3-38.5-38.5S80.9 96 102.2 96c21.2 0 38.5 17.3 38.5 38.5 0 21.3-17.2 38.5-38.5 38.5zm282.1 243h-66.4V312c0-24.8-.5-56.7-34.5-56.7-34.6 0-39.9 27-39.9 54.9V416h-66.4V202.2h63.7v29.2h.9c8.9-16.8 30.6-34.5 62.9-34.5 67.2 0 79.7 44.3 79.7 101.9V416z"
+      />
+    </svg>
+  ),
+  spotify: (props) => (
+    <svg viewBox="0 0 496 512" {...props}>
+      <path
+        fill="currentColor"
+        d="M248 8C111 8 0 119 0 256s111 248 248 248 248-111 248-248S385 8 248 8zm108.7 359.6a16 16 0 01-22 5.3c-60.7-37.2-136.8-45.6-226-24.7a16 16 0 01-18.9-11.4 16 16 0 0111.4-18.9c98.9-23.3 183.2-13.3 251.7 29.9a16 16 0 015.8 19.8zM352 301.5a16 16 0 01-22 5.4c-52.8-32.1-133.4-41.5-195.6-22.5a16 16 0 01-20-11 16 16 0 0111-20c70.3-21.4 159.1-11.2 219.4 26.9a16 16 0 015.2 21zM374.6 241a16 16 0 01-21.9 5.7c-45.8-27.9-116.1-34-168.5-18.5a16 16 0 01-20.1-10.9 16 16 0 0110.9-20.1c61-17.6 140.7-10.8 195.8 22.5A16 16 0 01374.6 241z"
+      />
     </svg>
   ),
 };
 
 export function DockBar() {
-  const { isDayMode, toggleMode } = useTheme(); // Use the theme context
+  const { isDayMode, toggleMode } = useTheme();
+
+  // Adaptive colors
+  const spotifyColor = isDayMode ? "#1DB954" : "#1ED760";
+  const iconColor = isDayMode ? "#111" : "#f5f5f5";
 
   return (
     <div className="relative">
       <Dock direction="middle">
         <DockIcon>
-          <div className="dock-icon">
-            <a href="https://github.com/TonyTran03" target="_blank" rel="noopener noreferrer">
-              <Icons.gitHub className="size-6" />
-            </a>
-          </div>
+          <a
+            href="https://github.com/TonyTran03"
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            <Icons.gitHub
+              className="w-5 h-5 sm:w-6 sm:h-6"
+              style={{ color: iconColor }}
+            />
+          </a>
         </DockIcon>
 
         <DockIcon>
-          <div className="dock-icon">
-            <a href="https://www.linkedin.com/in/tony-tran-a08b8a230/" target="_blank" rel="noopener noreferrer">
-              <Icons.Linkedin className="size-6" />
-            </a>
-          </div>
+          <a
+            href="https://www.linkedin.com/in/tony-tran-a08b8a230/"
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            <Icons.linkedin
+              className="w-5 h-5 sm:w-6 sm:h-6"
+              style={{ color: iconColor }}
+            />
+          </a>
         </DockIcon>
-        
+
+        <DockIcon>
+          <a
+            href="https://open.spotify.com/user/m9ckbj8yi65yt3az5iowj9dah?si=2dff65c74bdb49b8"
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            <Icons.spotify
+              className="w-5 h-5 sm:w-6 sm:h-6"
+              style={{ color: spotifyColor }}
+            />
+          </a>
+        </DockIcon>
+
         <ModeToggle onToggle={toggleMode} isDayMode={isDayMode} />
       </Dock>
     </div>
