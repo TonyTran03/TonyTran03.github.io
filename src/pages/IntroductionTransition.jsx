@@ -139,14 +139,14 @@ export default function IntroductionTransition() {
           borderColor,
           maxWidth:
             window.innerWidth > 1536
-              ? "940px" // for ultra-wide monitors
+              ? "940px"
               : window.innerWidth > 1024
-              ? "860px" // slightly bigger on desktop
+              ? "860px"
               : window.innerWidth > 640
-              ? "720px" // tablet
-              : "90%", // mobile full-width
-          padding: window.innerWidth > 1024 ? "4rem" : "3rem", // larger internal spacing on desktop
-          transform: "translateY(30px)", // slightly less vertical offset to look more balanced
+              ? "720px"
+              : "90%",
+          padding: window.innerWidth > 1024 ? "4rem" : "3rem",
+          transform: "translateY(30px)",
           fontFamily: "Outfit, Poppins, system-ui, sans-serif",
         }}
       >
