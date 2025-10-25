@@ -37,7 +37,7 @@ export default function IntroductionTransition() {
         markers: false,
       },
     });
-
+    gsap.set(boxRef.current, { opacity: 1, willChange: "transform" });
     timeline
       .fromTo(
         lettersRef.current,
@@ -52,9 +52,15 @@ export default function IntroductionTransition() {
       )
       .fromTo(
         boxRef.current,
-        { opacity: 0, scale: 0.85 },
-        { opacity: 1, scale: 1, ease: "power1.inOut", duration: 1 },
-        "-=0.3"
+        { opacity: 0.75, scale: 0.85, y: 40 },
+        {
+          opacity: 1,
+          scale: 1,
+          y: 0,
+          ease: "back.out(2)",
+          duration: 0.2,
+        },
+        "-=1"
       );
   }, []);
 
