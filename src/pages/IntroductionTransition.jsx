@@ -47,20 +47,20 @@ export default function IntroductionTransition() {
       .fromTo(
         diamondRef.current,
         { strokeDasharray: 400, strokeDashoffset: 400 },
-        { strokeDashoffset: 0, ease: "power1.inOut", duration: 1.25 },
+        { strokeDashoffset: 0, ease: "power1.inOut", duration: 1.2 },
         0
       )
       .fromTo(
         boxRef.current,
-        { opacity: 0.75, scale: 0.85, y: 40 },
+        { opacity: 0, scale: 0.85, y: 40 },
         {
           opacity: 1,
           scale: 1,
           y: 0,
-          ease: "back.out(2)",
-          duration: 0.2,
+          ease: "back.out(1.2)",
+          duration: 0.25,
         },
-        "-=1"
+        "-=0.5"
       );
   }, []);
 
@@ -137,8 +137,16 @@ export default function IntroductionTransition() {
         style={{
           backgroundColor: cardBg,
           borderColor,
-          maxWidth: "720px",
-          transform: "translateY(40px)",
+          maxWidth:
+            window.innerWidth > 1536
+              ? "940px" // for ultra-wide monitors
+              : window.innerWidth > 1024
+              ? "860px" // slightly bigger on desktop
+              : window.innerWidth > 640
+              ? "720px" // tablet
+              : "90%", // mobile full-width
+          padding: window.innerWidth > 1024 ? "4rem" : "3rem", // larger internal spacing on desktop
+          transform: "translateY(30px)", // slightly less vertical offset to look more balanced
           fontFamily: "Outfit, Poppins, system-ui, sans-serif",
         }}
       >
